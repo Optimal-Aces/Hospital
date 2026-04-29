@@ -350,24 +350,41 @@ window.confirmPatientArrival = async function(requestId) {
     showToast("Patient admitted to ER.", "success");
 };
 
-function showPatientModal(requestId, data) {
-    activeRequestId = requestId;
-    document.getElementById("modal-patient-name").textContent = data.patientName || "Unknown";
-    document.getElementById("modal-type").textContent = data.type || "MEDICAL";
-    document.getElementById("modal-responder").textContent = data.responderName || "—";
-    document.getElementById("modal-eta").textContent = "~" + (data.eta || "—") + " min";
-    document.getElementById("patient-modal").style.display = "flex";
+function renderIncomingRequest(requestId, req) {
+    // ── Read new fields with backwards-compatible fallbacks ──
+    const patientName  = req.patientName  || req.name  || "Unknown Patient";
+    const incidentType = req.type         || "MEDICAL";
+    const callerName   = req.callerName   || patientName;
+    const isWitness    = req.isWitness    ?? false;
+    const responder    = req.responderName || "—";
+    const eta          = req.eta           || "—";
 
-    try {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = 880;
-        gain.gain.setValueAtTime(0.3, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-        osc.start(); osc.stop(ctx.currentTime + 0.8);
-    } catch (e) {}
+    // ── Populate modal fields ──
+    document.getElementById("modal-patient-name").textContent = patientName;
+    document.getElementById("modal-type").textContent         = incidentType;
+    document.getElementById("modal-responder").textContent    = responder;
+    document.getElementById("modal-eta").textContent          =
+        eta !== "—" ? `~${eta} min` : "—";
+
+    // ── Show witness note in modal if caller ≠ patient ──
+    const modalWitnessRow = document.getElementById("modal-witness-row");
+    const modalWitnessVal = document.getElementById("modal-witness-value");
+
+    if (modalWitnessRow && modalWitnessVal) {
+        if (isWitness) {
+            modalWitnessRow.style.display = "flex";
+            modalWitnessVal.textContent   = `Reported by ${callerName}`;
+        } else {
+            modalWitnessRow.style.display = "none";
+        }
+    }
+
+    // Store current requestId for accept/decline buttons
+    window._currentRequestId  = requestId;
+    window._currentPatientReq = req;
+
+    // Show the modal
+    document.getElementById("patient-modal").style.display = "flex";
 }
 
 window.respondToRequest = function(response) {

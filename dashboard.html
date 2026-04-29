@@ -118,6 +118,7 @@
         <div class="modal-card">
             <div class="modal-badge">🚨 INCOMING PATIENT</div>
             <div id="modal-patient-name" class="modal-patient-name">—</div>
+
             <div class="modal-meta-row">
                 <span class="modal-label">Type:</span>
                 <span id="modal-type" class="modal-value">—</span>
@@ -126,10 +127,19 @@
                 <span class="modal-label">Responder:</span>
                 <span id="modal-responder" class="modal-value">—</span>
             </div>
+
+            <!-- Witness row — hidden by default, shown when isWitness === true -->
+            <div id="modal-witness-row" class="modal-meta-row" style="display:none;">
+                <span class="modal-label">Witness:</span>
+                <span id="modal-witness-value" class="modal-value"
+                    style="color:#FF9100;">—</span>
+            </div>
+
             <div class="modal-meta-row">
                 <span class="modal-label">ETA:</span>
                 <span id="modal-eta" class="modal-value">—</span>
             </div>
+
             <div class="modal-divider"></div>
             <div class="modal-actions">
                 <button class="btn-decline-modal"

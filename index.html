@@ -22,6 +22,7 @@
                 <div id="tab-register" class="tab" onclick="switchTab('register')">REGISTER</div>
             </div>
 
+            <!-- LOGIN FORM (unchanged) -->
             <div id="form-login">
                 <div class="field-group">
                     <input type="email" id="login-email" placeholder="Hospital Email">
@@ -33,27 +34,51 @@
                 <p id="login-error" class="error-msg"></p>
             </div>
 
+            <!-- REGISTER FORM -->
             <div id="form-register" style="display:none;">
-                <div class="field-group"><input type="text" id="reg-name" placeholder="Hospital Name"></div>
-                <div class="field-group"><input type="text" id="reg-phone" placeholder="Phone Number"></div>
                 <div class="field-group">
-                    <select id="reg-barangay">
-                        <option value="">Select Barangay</option>
-                        <option>Poblacion</option>
-                        <option>Bagontaas</option>
-                        <option>Maapag</option>
-                        <option>Guinoyoran</option>
-                        <option>Lumbo</option>
-                        <option>Mailag</option>
-                        <option>Sinayawan</option>
-                        <option>Tongantongan</option>
-                        <option>Laligan</option>
-                        <option>Catumbalon</option>
-                    </select>
+                    <input type="text" id="reg-name" placeholder="Hospital Name">
                 </div>
-                <div class="field-group"><input type="number" id="reg-total-beds" placeholder="Total ER Beds" min="1"></div>
-                <div class="field-group"><input type="email" id="reg-email" placeholder="Email Address"></div>
-                <div class="field-group"><input type="password" id="reg-password" placeholder="Create Password"></div>
+                <div class="field-group">
+                    <input type="text" id="reg-phone" placeholder="Phone Number">
+                </div>
+                <div class="field-group">
+                    <input type="text" id="reg-barangay" placeholder="Barangay (e.g. Poblacion)">
+                </div>
+
+                <!-- Replaced barangay dropdown with coordinate inputs -->
+                <p class="coord-label">📍 Hospital GPS Coordinates</p>
+                <p class="coord-hint">
+                    Open <a href="https://maps.google.com" target="_blank">Google Maps</a>,
+                    right-click your hospital location, and copy the coordinates here.
+                </p>
+                <div class="field-group coord-row">
+                    <input
+                        type="number"
+                        id="reg-latitude"
+                        placeholder="Latitude (e.g. 7.9064)"
+                        step="0.000001"
+                        min="-90"
+                        max="90">
+                    <input
+                        type="number"
+                        id="reg-longitude"
+                        placeholder="Longitude (e.g. 125.0931)"
+                        step="0.000001"
+                        min="-180"
+                        max="180">
+                </div>
+                <p id="coord-error" class="error-msg" style="margin-top:-8px; margin-bottom:8px;"></p>
+
+                <div class="field-group">
+                    <input type="number" id="reg-total-beds" placeholder="Total ER Beds" min="1">
+                </div>
+                <div class="field-group">
+                    <input type="email" id="reg-email" placeholder="Email Address">
+                </div>
+                <div class="field-group">
+                    <input type="password" id="reg-password" placeholder="Create Password">
+                </div>
                 <button id="btn-register" class="btn-primary" onclick="registerHospital()">CREATE ACCOUNT</button>
                 <p class="auth-note">⚠ Dispatcher approval required after registration.</p>
                 <p id="reg-error" class="error-msg"></p>
