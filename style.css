@@ -1,48 +1,71 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
 
+/* ============================
+   CUSTOM PROPERTIES (THEME)
+   ============================ */
 :root {
-    --danger:       #FF3131;
-    --danger-soft:  rgba(255,49,49,0.08);
-    --primary:       #2979FF;
-    --primary-soft: rgba(41,121,255,0.08);
-    --success:       #00E676;
-    --success-soft: rgba(0,230,118,0.12);
-    --warning:       #FF9100;
-    --surface:       rgba(12,12,14,0.96);
-    --border:        rgba(255,255,255,0.07);
-    --text:          #F0F0F0;
-    --text-muted:    #666;
-    --text-sub:      #999;
-    --bg:            #050505;
+    /* Colors – rebalanced for clear hierarchy */
+    --primary:       #3B82F6;    /* Blue – primary actions, CTA, positive */
+    --primary-soft:  rgba(59,130,246,0.1);
+    --danger:        #EF4444;    /* Soft red – destructive actions, errors */
+    --danger-soft:   rgba(239,68,68,0.1);
+    --success:       #10B981;    /* Emerald – success, accepted, ON */
+    --success-soft:  rgba(16,185,129,0.1);
+    --warning:       #F59E0B;    /* Amber – warnings */
+    --warning-soft:  rgba(245,158,11,0.1);
+
+    /* Surfaces & Text – higher contrast for readability */
+    --surface:       #0D0F13;    /* Card & panel background */
+    --bg:            #050505;    /* Body background */
+    --border:        rgba(255,255,255,0.08);
+    --text:          #F1F5F9;    /* Primary text */
+    --text-sub:      #94A3B8;    /* Secondary text – now WCAG AA */
+    --text-muted:    #64748B;    /* Low‑emphasis text */
+
+    /* Typography */
     --font:          'Poppins', sans-serif;
     --radius:        10px;
     --shadow:        0 20px 50px rgba(0,0,0,0.7);
+    --transition:    0.2s ease;
 }
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+/* ============================
+   RESET & BASE
+   ============================ */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
 
 body {
     font-family: var(--font);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
+    line-height: 1.5;
 }
 
-/* ── AUTH PAGE (index.html) ── */
+/* ============================
+   AUTH PAGE (login / register)
+   ============================ */
 .auth-wrapper {
     display: flex;
     align-items: center;
     justify-content: center;
     min-height: 100vh;
     padding: 20px;
-    background: radial-gradient(ellipse at 50% 0%, 
-        rgba(200,30,30,0.12) 0%, transparent 60%);
+    background: radial-gradient(ellipse at 50% 0%,
+            rgba(59,130,246,0.1) 0%,
+            transparent 60%);
 }
 
 .auth-card {
     background: var(--surface);
     border: 1px solid var(--border);
-    border-top: 4px solid var(--danger);
+    border-top: 4px solid var(--primary);
     border-radius: var(--radius);
     padding: 40px;
     width: 100%;
@@ -62,22 +85,22 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: var(--danger);
-    box-shadow: 0 0 10px var(--danger);
+    background: var(--primary);
+    box-shadow: 0 0 10px var(--primary);
 }
 
 .auth-brand h1 {
     font-size: 1.8rem;
     font-weight: 800;
-    color: var(--danger);
-    letter-spacing: 3px;
+    color: var(--primary);
+    letter-spacing: 0.5px;          /* Softer spacing */
 }
 
 .auth-subtitle {
     text-align: center;
     font-size: 0.7rem;
     color: var(--text-muted);
-    letter-spacing: 3px;
+    letter-spacing: 2px;
     text-transform: uppercase;
     margin-bottom: 28px;
 }
@@ -99,11 +122,11 @@ body {
     font-weight: 600;
     cursor: pointer;
     color: var(--text-muted);
-    transition: all 0.2s;
+    transition: all var(--transition);
 }
 
 .tab.active {
-    background: var(--danger);
+    background: var(--primary);
     color: white;
 }
 
@@ -122,34 +145,56 @@ body {
     font-family: var(--font);
     font-size: 0.9rem;
     outline: none;
-    transition: border-color 0.2s;
+    transition: border-color var(--transition);
+    line-height: 1.4;
+}
+
+.field-group input::placeholder,
+.field-group select::placeholder {
+    color: rgba(255,255,255,0.3);
 }
 
 .field-group input:focus,
 .field-group select:focus {
-    border-color: var(--danger);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
-.field-group select option { background: #111; }
+.field-group select option {
+    background: #111;
+}
 
 .btn-primary {
     width: 100%;
     padding: 14px;
-    background: var(--danger);
+    background: var(--primary);
     border: none;
     border-radius: 8px;
     color: white;
     font-family: var(--font);
     font-size: 0.9rem;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     cursor: pointer;
     margin-top: 8px;
-    transition: filter 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s;
 }
 
-.btn-primary:hover { filter: brightness(1.1); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+}
+
+.btn-primary:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+.btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
 
 .auth-note {
     font-size: 0.75rem;
@@ -167,7 +212,9 @@ body {
     min-height: 18px;
 }
 
-/* ── DASHBOARD HEADER ── */
+/* ============================
+   DASHBOARD HEADER
+   ============================ */
 .hosp-header {
     display: flex;
     align-items: center;
@@ -189,8 +236,8 @@ body {
 .brand-name {
     font-size: 1.1rem;
     font-weight: 800;
-    color: var(--danger);
-    letter-spacing: 2px;
+    color: var(--primary);
+    letter-spacing: 0.5px;
 }
 
 .brand-sub {
@@ -220,13 +267,13 @@ body {
 .status-badge.available {
     background: var(--success-soft);
     color: var(--success);
-    border: 1px solid rgba(0,230,118,0.3);
+    border: 1px solid rgba(16,185,129,0.3);
 }
 
 .status-badge.full {
     background: var(--danger-soft);
     color: var(--danger);
-    border: 1px solid rgba(255,49,49,0.3);
+    border: 1px solid rgba(239,68,68,0.3);
 }
 
 .status-dot {
@@ -234,7 +281,6 @@ body {
     height: 8px;
     border-radius: 50%;
     background: currentColor;
-    box-shadow: 0 0 10px currentColor;
     animation: pulse-glow 2s infinite;
 }
 
@@ -253,7 +299,7 @@ body {
     font-family: var(--font);
     font-size: 0.78rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all var(--transition);
 }
 
 .btn-logout:hover {
@@ -261,7 +307,14 @@ body {
     color: var(--danger);
 }
 
-/* ── DASHBOARD LAYOUT ── */
+.btn-logout:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+}
+
+/* ============================
+   DASHBOARD LAYOUT
+   ============================ */
 .dashboard-body {
     display: grid;
     grid-template-columns: 280px 1fr 260px;
@@ -286,7 +339,23 @@ body {
     overflow-y: auto;
 }
 
-/* ── PANEL COMPONENTS ── */
+/* Responsive – stack panels on smaller screens */
+@media (max-width: 1200px) {
+    .dashboard-body {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr auto;
+    }
+    .panel,
+    .right-panel {
+        border-right: none;
+        border-left: none;
+        border-bottom: 1px solid var(--border);
+    }
+}
+
+/* ============================
+   PANEL COMPONENTS
+   ============================ */
 .panel-section-title {
     font-size: 0.65rem;
     font-weight: 700;
@@ -332,20 +401,25 @@ body {
 .er-status-value.available { color: var(--success); }
 .er-status-value.full      { color: var(--danger); }
 
+/* Toggle switch – slightly larger, smoother */
 .toggle-switch {
     position: relative;
-    width: 44px;
-    height: 24px;
+    width: 48px;
+    height: 26px;
     flex-shrink: 0;
 }
 
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
 
 .toggle-slider {
     position: absolute;
     inset: 0;
     background: #333;
-    border-radius: 24px;
+    border-radius: 26px;
     cursor: pointer;
     transition: background 0.3s;
 }
@@ -353,8 +427,8 @@ body {
 .toggle-slider::before {
     content: "";
     position: absolute;
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
     left: 3px;
     top: 3px;
     background: white;
@@ -367,7 +441,12 @@ body {
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
-    transform: translateX(20px);
+    transform: translateX(22px);
+}
+
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 /* ── BED COUNTER ── */
@@ -407,13 +486,18 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all var(--transition);
 }
 
 .bed-btn:hover {
-    background: var(--danger-soft);
-    border-color: var(--danger);
-    color: var(--danger);
+    background: var(--primary-soft);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.bed-btn:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .bed-count {
@@ -445,7 +529,9 @@ body {
     max-width: 60%;
 }
 
-/* ── MAIN PANEL ── */
+/* ============================
+   MAIN PANEL
+   ============================ */
 .main-header-row {
     display: flex;
     align-items: flex-start;
@@ -473,22 +559,34 @@ body {
     font-weight: 800;
 }
 
-/* ── REQUEST CARDS ── */
+/* ============================
+   REQUEST CARDS
+   ============================ */
 .request-card {
     background: #111;
     border: 1px solid var(--border);
-    border-left: 4px solid var(--danger);
+    border-left: 4px solid var(--primary);    /* Default – Pending uses primary */
     border-radius: var(--radius);
     padding: 18px 20px;
     margin-bottom: 12px;
     animation: slideIn 0.3s ease;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.request-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
 }
 
 .request-card.accepted {
-    border-left: 4px solid var(--success);
-    background: linear-gradient(to right, rgba(0,230,118,0.05), transparent);
+    border-left-color: var(--success);
+    background: linear-gradient(to right, rgba(16,185,129,0.05), transparent);
 }
-.request-card.declined { border-left-color: var(--text-muted); opacity: 0.5; }
+
+.request-card.declined {
+    border-left-color: var(--text-muted);
+    opacity: 0.5;
+}
 
 .request-card-header {
     display: flex;
@@ -512,16 +610,18 @@ body {
     border-radius: 20px;
 }
 
-.request-badge.pending  {
-    background: var(--danger-soft);
-    color: var(--danger);
-    border: 1px solid rgba(255,49,49,0.3);
+.request-badge.pending {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid rgba(59,130,246,0.3);
 }
+
 .request-badge.accepted {
     background: var(--success-soft);
     color: var(--success);
-    border: 1px solid rgba(0,230,118,0.3);
+    border: 1px solid rgba(16,185,129,0.3);
 }
+
 .request-badge.declined {
     background: rgba(255,255,255,0.04);
     color: var(--text-muted);
@@ -545,39 +645,61 @@ body {
 .btn-accept {
     flex: 1;
     padding: 10px;
-    background: var(--success);
+    background: var(--primary);    /* Accept uses primary blue */
     border: none;
     border-radius: 6px;
-    color: #0a0a0c;
+    color: white;
     font-family: var(--font);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    transition: filter 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-accept:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+}
+
+.btn-accept:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .btn-decline {
     flex: 1;
     padding: 10px;
     background: transparent;
-    border: 1px solid rgba(255,49,49,0.3);
+    border: 1px solid rgba(239,68,68,0.3);
     border-radius: 6px;
     color: var(--danger);
     font-family: var(--font);
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background var(--transition);
 }
 
-.btn-accept:hover  { filter: brightness(1.1); }
-.btn-decline:hover { background: var(--danger-soft); }
+.btn-decline:hover {
+    background: var(--danger-soft);
+}
 
-/* ── PATIENT LOG ── */
+.btn-decline:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+}
+
+/* ============================
+   PATIENT LOG (right panel)
+   ============================ */
 .log-entry {
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
     font-size: 0.78rem;
+}
+
+.log-entry:last-child {
+    border-bottom: none;
 }
 
 .log-entry-name {
@@ -602,10 +724,19 @@ body {
     font-size: 0.85rem;
 }
 
-.empty-icon { font-size: 2rem; opacity: 0.4; }
-.empty-log  { font-size: 0.78rem; color: var(--text-muted); }
+.empty-icon {
+    font-size: 2.5rem;
+    opacity: 0.4;
+}
 
-/* ── MODAL ── */
+.empty-log {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+/* ============================
+   MODAL
+   ============================ */
 .modal-overlay {
     position: fixed;
     inset: 0;
@@ -621,7 +752,7 @@ body {
 .modal-card {
     background: #0a0a0c;
     border: 1px solid var(--border);
-    border-top: 4px solid var(--danger);
+    border-top: 4px solid var(--primary);        /* Default primary – override for dangerous actions if needed */
     border-radius: 14px;
     padding: 32px;
     width: 100%;
@@ -630,12 +761,17 @@ body {
     animation: zoomIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
 }
 
+/* Destructive modal variant (add .modal-danger to the overlay when applicable) */
+.modal-overlay.modal-danger .modal-card {
+    border-top-color: var(--danger);
+}
+
 .modal-badge {
     display: inline-block;
     padding: 4px 12px;
-    background: var(--danger-soft);
-    color: var(--danger);
-    border: 1px solid rgba(255,49,49,0.3);
+    background: var(--primary-soft);
+    color: var(--primary);
+    border: 1px solid rgba(59,130,246,0.3);
     border-radius: 20px;
     font-size: 0.7rem;
     font-weight: 700;
@@ -674,22 +810,32 @@ body {
 .btn-accept-modal {
     flex: 1;
     padding: 14px;
-    background: var(--success);
+    background: var(--primary);
     border: none;
     border-radius: 8px;
-    color: #0a0a0c;
+    color: white;
     font-family: var(--font);
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: filter 0.2s;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-accept-modal:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+}
+
+.btn-accept-modal:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
 }
 
 .btn-decline-modal {
     flex: 1;
     padding: 14px;
     background: transparent;
-    border: 1px solid rgba(255,49,49,0.3);
+    border: 1px solid rgba(239,68,68,0.3);
     border-radius: 8px;
     color: var(--danger);
     font-family: var(--font);
@@ -698,10 +844,18 @@ body {
     cursor: pointer;
 }
 
-.btn-accept-modal:hover  { filter: brightness(1.1); }
-.btn-decline-modal:hover { background: var(--danger-soft); }
+.btn-decline-modal:hover {
+    background: var(--danger-soft);
+}
 
-/* ── TOAST ── */
+.btn-decline-modal:focus-visible {
+    outline: 2px solid var(--danger);
+    outline-offset: 2px;
+}
+
+/* ============================
+   TOAST NOTIFICATION
+   ============================ */
 #toast {
     position: fixed;
     bottom: -60px;
@@ -717,20 +871,47 @@ body {
     transition: bottom 0.4s cubic-bezier(0.175,0.885,0.32,1.275), opacity 0.3s;
     opacity: 0;
     white-space: nowrap;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
 }
 
-#toast.show          { bottom: 32px; opacity: 1; }
-#toast.toast-hidden { bottom: -60px; opacity: 0; }
-#toast.success      { background: #00C853; }
-#toast.danger       { background: var(--danger); }
-#toast.warning      { background: var(--warning); }
+#toast.show {
+    bottom: 32px;
+    opacity: 1;
+}
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar       { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+#toast.toast-hidden {
+    bottom: -60px;
+    opacity: 0;
+}
 
-/* ── ANIMATIONS ── */
+/* Toast variants – you can add these classes dynamically */
+#toast.success { background: var(--success); }
+#toast.danger  { background: var(--danger); }
+#toast.warning { background: var(--warning); }
+
+/* ============================
+   SCROLLBAR
+   ============================ */
+::-webkit-scrollbar {
+    width: 4px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #3a3a3e;
+    border-radius: 10px;
+}
+
+/* Firefox */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: #3a3a3e transparent;
+}
+
+/* ============================
+   ANIMATIONS
+   ============================ */
 @keyframes slideIn {
     from { opacity: 0; transform: translateY(-10px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -742,7 +923,29 @@ body {
 }
 
 @keyframes pulse-glow {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 230, 118, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 230, 118, 0); }
+    0%   { box-shadow: 0 0 0 0 currentColor; }
+    70%  { box-shadow: 0 0 0 6px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ============================
+   UTILITY CLASSES (optional)
+   ============================ */
+.text-muted { color: var(--text-muted); }
+.text-danger { color: var(--danger); }
+.text-success { color: var(--success); }
+.text-primary { color: var(--primary); }
+
+/* Improved focus ring for all interactive elements */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+.toggle-switch input:focus-visible + .toggle-slider {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Remove default focus outline for mouse users, keep for keyboard */
+:focus:not(:focus-visible) {
+    outline: none;
 }
