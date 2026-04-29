@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-RESCUE | Hospital Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="brand-dot"></div>
+                <h1>V-RESCUE</h1>
+            </div>
+            <p class="auth-subtitle">Hospital Portal</p>
+
+            <div class="tab-toggle">
+                <div id="tab-login" class="tab active" onclick="switchTab('login')">LOGIN</div>
+                <div id="tab-register" class="tab" onclick="switchTab('register')">REGISTER</div>
+            </div>
+
+            <div id="form-login">
+                <div class="field-group">
+                    <input type="email" id="login-email" placeholder="Hospital Email">
+                </div>
+                <div class="field-group">
+                    <input type="password" id="login-password" placeholder="Password">
+                </div>
+                <button id="btn-login" class="btn-primary" onclick="loginHospital()">LOGIN</button>
+                <p id="login-error" class="error-msg"></p>
+            </div>
+
+            <div id="form-register" style="display:none;">
+                <div class="field-group"><input type="text" id="reg-name" placeholder="Hospital Name"></div>
+                <div class="field-group"><input type="text" id="reg-phone" placeholder="Phone Number"></div>
+                <div class="field-group">
+                    <select id="reg-barangay">
+                        <option value="">Select Barangay</option>
+                        <option>Poblacion</option>
+                        <option>Bagontaas</option>
+                        <option>Maapag</option>
+                        <option>Guinoyoran</option>
+                        <option>Lumbo</option>
+                        <option>Mailag</option>
+                        <option>Sinayawan</option>
+                        <option>Tongantongan</option>
+                        <option>Laligan</option>
+                        <option>Catumbalon</option>
+                    </select>
+                </div>
+                <div class="field-group"><input type="number" id="reg-total-beds" placeholder="Total ER Beds" min="1"></div>
+                <div class="field-group"><input type="email" id="reg-email" placeholder="Email Address"></div>
+                <div class="field-group"><input type="password" id="reg-password" placeholder="Create Password"></div>
+                <button id="btn-register" class="btn-primary" onclick="registerHospital()">CREATE ACCOUNT</button>
+                <p class="auth-note">⚠ Dispatcher approval required after registration.</p>
+                <p id="reg-error" class="error-msg"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast-hidden"></div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

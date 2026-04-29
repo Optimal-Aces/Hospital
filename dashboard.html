@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V-RESCUE | Hospital Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="hosp-header">
+        <div class="header-brand">
+            <div class="brand-dot"></div>
+            <span class="brand-name">V-RESCUE</span>
+            <span class="brand-sub">Hospital Portal</span>
+        </div>
+        <div class="header-right">
+            <div id="header-status-badge" class="status-badge available">
+                <div class="status-dot"></div>
+                <span id="header-status-text">AVAILABLE</span>
+            </div>
+            <span id="header-hospital-name" class="header-hosp-name">Loading...</span>
+            <button class="btn-logout" onclick="logoutHospital()">Logout</button>
+        </div>
+    </header>
+
+    <div class="dashboard-body">
+
+        <!-- Left panel — ER Status -->
+        <aside class="panel left-panel">
+
+            <div class="panel-section-title">ER STATUS</div>
+
+            <!-- Availability toggle -->
+            <div class="er-toggle-card">
+                <div class="er-toggle-label">
+                    <span>Emergency Room</span>
+                    <span id="er-status-text" class="er-status-value available">Available</span>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="er-toggle" checked onchange="toggleERStatus()">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <!-- Bed counter -->
+            <div class="bed-card">
+                <div class="bed-label">Available Beds</div>
+                <div class="bed-controls">
+                    <button class="bed-btn" onclick="adjustBeds(-1)">−</button>
+                    <span id="available-beds" class="bed-count">—</span>
+                    <button class="bed-btn" onclick="adjustBeds(1)">+</button>
+                </div>
+                <div class="bed-total">of <span id="total-beds">—</span> total beds</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Hospital info -->
+            <div class="panel-section-title">HOSPITAL INFO</div>
+            <div class="info-row">
+                <span class="info-label">Name</span>
+                <span id="info-name" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Barangay</span>
+                <span id="info-barangay" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Phone</span>
+                <span id="info-phone" class="info-value">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status</span>
+                <span id="info-approval" class="info-value">—</span>
+            </div>
+
+        </aside>
+
+        <!-- Main panel — Incoming requests -->
+        <main class="main-panel">
+
+            <div class="main-header-row">
+                <div>
+                    <div class="panel-section-title">INCOMING PATIENT REQUESTS</div>
+                    <p class="main-subtitle">
+                        Real-time requests from V-RESCUE dispatch
+                    </p>
+                </div>
+                <span id="request-count" class="count-badge">0</span>
+            </div>
+
+            <div id="requests-container">
+                <div class="empty-state">
+                    <div class="empty-icon">🏥</div>
+                    <p>No incoming patient requests</p>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Right panel — Patient log -->
+        <aside class="panel right-panel">
+
+            <div class="panel-section-title">PATIENT LOG</div>
+            <div id="patient-log">
+                <p class="empty-log">No patients yet today.</p>
+            </div>
+
+        </aside>
+
+    </div>
+
+    <!-- Incoming patient alert modal -->
+    <div id="patient-modal" class="modal-overlay" style="display:none;">
+        <div class="modal-card">
+            <div class="modal-badge">🚨 INCOMING PATIENT</div>
+            <div id="modal-patient-name" class="modal-patient-name">—</div>
+            <div class="modal-meta-row">
+                <span class="modal-label">Type:</span>
+                <span id="modal-type" class="modal-value">—</span>
+            </div>
+            <div class="modal-meta-row">
+                <span class="modal-label">Responder:</span>
+                <span id="modal-responder" class="modal-value">—</span>
+            </div>
+            <div class="modal-meta-row">
+                <span class="modal-label">ETA:</span>
+                <span id="modal-eta" class="modal-value">—</span>
+            </div>
+            <div class="modal-divider"></div>
+            <div class="modal-actions">
+                <button class="btn-decline-modal"
+                    onclick="respondToRequest('DECLINED')">DECLINE</button>
+                <button class="btn-accept-modal"
+                    onclick="respondToRequest('ACCEPTED')">ACCEPT PATIENT</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast-hidden">
+        <span id="toast-msg">—</span>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
