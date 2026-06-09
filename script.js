@@ -170,66 +170,80 @@ window.registerHospital = async function() {
     }
 };
 
+
 // ── DASHBOARD FUNCTIONS ───────────────────────────────────────
+let allRequests = [];
+let currentFilter = "ALL";
+let selectedRequestId = "";
+const modalShownRequests = new Set();
+
+function normalizeRequestStatus(status) {
+    const s = String(status || "PENDING").toUpperCase();
+    if (s === "HOSPITAL_ACCEPTED" || s === "HOSPITAL_BOUND") return "ACCEPTED";
+    if (s === "HOSPITAL_READY") return "READY";
+    if (s === "PATIENT_RECEIVED" || s === "ARRIVED_HOSPITAL") return "COMPLETED";
+    return s;
+}
+
 async function loadHospitalData() {
     const snap = await get(ref(db, "Hospitals/" + hospitalId));
     if (!snap.exists()) return;
 
     hospitalData = snap.val();
-
-    document.getElementById("header-hospital-name").textContent = hospitalData.name;
-    document.getElementById("info-name").textContent = hospitalData.name;
-    document.getElementById("info-barangay").textContent = hospitalData.barangay;
-    document.getElementById("info-phone").textContent = hospitalData.phone;
-    document.getElementById("info-approval").textContent = hospitalData.approved ? "✅ Approved" : "⏳ Pending";
-    document.getElementById("available-beds").textContent = hospitalData.availableBeds ?? "—";
-    document.getElementById("total-beds").textContent = hospitalData.totalBeds ?? "—";
-
-    const isAvailable = hospitalData.erStatus === "Available";
-    document.getElementById("er-toggle").checked = isAvailable;
-    updateERStatusUI(isAvailable);
+    applyHospitalDataToUI(hospitalData);
 
     onValue(ref(db, "Hospitals/" + hospitalId), (snapshot) => {
         const data = snapshot.val();
         if (!data) return;
         hospitalData = data;
-        document.getElementById("available-beds").textContent = data.availableBeds ?? "—";
-        const avail = data.erStatus === "Available";
-        document.getElementById("er-toggle").checked = avail;
-        updateERStatusUI(avail);
+        applyHospitalDataToUI(data);
     });
+}
+
+function applyHospitalDataToUI(data) {
+    setText("header-hospital-name", data.name || "Hospital");
+    setText("info-name", data.name || "—");
+    setText("info-barangay", data.barangay || "—");
+    setText("info-phone", data.phone || "—");
+    setText("info-approval", data.approved ? "✅ Approved" : "⏳ Pending");
+    setText("available-beds", data.availableBeds ?? "—");
+    setText("total-beds", data.totalBeds ?? "—");
+    setText("beds-summary", `${data.availableBeds ?? "—"}/${data.totalBeds ?? "—"}`);
+
+    const erToggle = document.getElementById("er-toggle");
+    const isAvailable = data.erStatus === "Available";
+    if (erToggle) erToggle.checked = isAvailable;
+    updateERStatusUI(isAvailable);
 }
 
 async function loadPastPatients() {
     const logDiv = document.getElementById("patient-log");
     const requestsRef = ref(db, "PatientRequests");
-    
+
     onValue(requestsRef, (snapshot) => {
-        logDiv.innerHTML = ""; 
-        let hasPatients = false;
+        if (!logDiv) return;
+        logDiv.innerHTML = "";
         const data = [];
-        
+
         snapshot.forEach(child => {
             const req = child.val();
-            // Show only COMPLETED patients in the history log
             if (req.hospitalId === hospitalId && req.status === "COMPLETED") {
                 data.push(req);
-                hasPatients = true;
             }
         });
 
-        if (!hasPatients) {
+        if (!data.length) {
             logDiv.innerHTML = '<p class="empty-log">No history found.</p>';
             return;
         }
 
-        data.sort((a, b) => b.timestamp - a.timestamp);
-        data.forEach(req => addToPatientLog(req));
+        data.sort((a, b) => (b.completedAt || b.timestamp || 0) - (a.completedAt || a.timestamp || 0));
+        data.slice(0, 8).forEach(req => addToPatientLog(req));
     });
 }
 
 window.toggleERStatus = function() {
-    const isAvailable = document.getElementById("er-toggle").checked;
+    const isAvailable = document.getElementById("er-toggle")?.checked;
     update(ref(db, "Hospitals/" + hospitalId), {
         erStatus: isAvailable ? "Available" : "Full"
     });
@@ -241,15 +255,13 @@ function updateERStatusUI(isAvailable) {
     const headerText = document.getElementById("header-status-text");
 
     if (isAvailable) {
-        statusText.textContent = "Available";
-        statusText.className = "er-status-value available";
-        headerBadge.className = "status-badge available";
-        headerText.textContent = "AVAILABLE";
+        if (statusText) { statusText.textContent = "Available"; statusText.className = "er-status-value available"; }
+        if (headerBadge) headerBadge.className = "status-badge available";
+        if (headerText) headerText.textContent = "AVAILABLE";
     } else {
-        statusText.textContent = "Full";
-        statusText.className = "er-status-value full";
-        headerBadge.className = "status-badge full";
-        headerText.textContent = "FULL";
+        if (statusText) { statusText.textContent = "Full"; statusText.className = "er-status-value full"; }
+        if (headerBadge) headerBadge.className = "status-badge full";
+        if (headerText) headerText.textContent = "FULL";
     }
 }
 
@@ -261,97 +273,230 @@ window.adjustBeds = function(delta) {
     update(ref(db, "Hospitals/" + hospitalId), {
         availableBeds: newVal,
         erStatus: newVal > 0 ? "Available" : "Full"
-    }).then(() => {
-        showToast(`Beds updated to ${newVal}`, "success");
-    });
+    }).then(() => showToast(`Beds updated to ${newVal}`, "success"));
 };
 
 function listenForPatientRequests() {
-    let requestCount = 0;
-
     onValue(ref(db, "PatientRequests"), (snapshot) => {
-        const container = document.getElementById("requests-container");
-        container.innerHTML = "";
-        requestCount = 0;
+        allRequests = [];
 
-        if (!snapshot.exists()) {
-            container.innerHTML = `<div class="empty-state"><div class="empty-icon">🏥</div><p>No incoming patient requests</p></div>`;
-            document.getElementById("request-count").textContent = "0";
-            return;
+        if (snapshot.exists()) {
+            snapshot.forEach((child) => {
+                const data = child.val();
+                if (data.hospitalId !== hospitalId) return;
+                allRequests.push({ id: child.key, ...data, status: normalizeRequestStatus(data.status || "PENDING") });
+            });
         }
 
-        snapshot.forEach((child) => {
-            const data = child.val();
-            if (data.hospitalId !== hospitalId) return;
-            // Display both PENDING and ACCEPTED (awaiting confirmation) requests
-            if (data.status === "PENDING" || data.status === "ACCEPTED") {
-                if (data.status === "PENDING") requestCount++;
-                renderRequestCard(child.key, data);
-            }
+        allRequests.sort((a, b) => {
+            const p = priorityWeight(b.priority || b.type) - priorityWeight(a.priority || a.type);
+            if (p !== 0) return p;
+            return (b.timestamp || 0) - (a.timestamp || 0);
         });
 
-        document.getElementById("request-count").textContent = requestCount;
+        renderQueueBoard();
+        updateHospitalStats();
+
+        // Close the incoming modal automatically once its request is accepted/declined elsewhere.
+        if (activeRequestId) {
+            const active = allRequests.find(r => r.id === activeRequestId);
+            if (!active || normalizeRequestStatus(active.status) !== "PENDING") {
+                const modal = document.getElementById("patient-modal");
+                if (modal) modal.style.display = "none";
+                activeRequestId = "";
+            }
+        }
+
+        if (selectedRequestId) {
+            const selected = allRequests.find(r => r.id === selectedRequestId);
+            if (selected) renderSelectedPatient(selectedRequestId, selected);
+        }
     });
 
-    // Alert sound for new PENDING requests
     onChildAdded(ref(db, "PatientRequests"), (snapshot) => {
         const data = snapshot.val();
-        if (data.hospitalId === hospitalId && data.status === "PENDING") {
+        const status = normalizeRequestStatus(data.status || "PENDING");
+        if (data.hospitalId === hospitalId && status === "PENDING") {
             showPatientModal(snapshot.key, data);
         }
     });
 }
 
+window.setQueueFilter = function(filter) {
+    currentFilter = filter;
+    document.querySelectorAll(".queue-tab").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.filter === filter);
+    });
+    renderQueueBoard();
+};
+
+function renderQueueBoard() {
+    const container = document.getElementById("requests-container");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const visible = allRequests.filter(req => {
+        const status = normalizeRequestStatus(req.status);
+        if (currentFilter === "ALL") return status !== "DECLINED";
+        return status === currentFilter;
+    });
+
+    const activeCount = allRequests.filter(req => ["PENDING", "ACCEPTED", "READY"].includes(normalizeRequestStatus(req.status))).length;
+    setText("request-count", activeCount);
+
+    if (!visible.length) {
+        container.innerHTML = `<div class="empty-state"><div class="empty-icon">🏥</div><p>No ${currentFilter.toLowerCase()} patient requests</p></div>`;
+        return;
+    }
+
+    visible.forEach(req => renderRequestCard(req.id, req));
+}
+
 function renderRequestCard(requestId, data) {
     const container = document.getElementById("requests-container");
-    const existing = document.getElementById("req-" + requestId);
-    if (existing) existing.remove();
+    if (!container) return;
 
-    container.querySelector(".empty-state")?.remove();
+    const status = normalizeRequestStatus(data.status || "PENDING");
+    const priority = normalizePriority(data.priority || data.type);
+    const isPending = status === "PENDING";
+    const isAccepted = status === "ACCEPTED" || status === "READY";
+    const isCompleted = status === "COMPLETED";
 
     const card = document.createElement("div");
     card.id = "req-" + requestId;
-    card.className = `request-card ${(data.status || "pending").toLowerCase()}`;
-
-    const isPending = data.status === "PENDING";
-    const isAccepted = data.status === "ACCEPTED";
+    card.className = `request-card ${status.toLowerCase()} priority-${priority.toLowerCase()}`;
+    card.onclick = (e) => {
+        if (e.target.tagName.toLowerCase() === "button") return;
+        selectedRequestId = requestId;
+        renderSelectedPatient(requestId, data);
+    };
 
     card.innerHTML = `
         <div class="request-card-header">
-            <span class="request-patient-name">${escapeHTML(data.patientName || "Unknown")}</span>
-            <span class="request-badge ${(data.status || "pending").toLowerCase()}">${data.status || "PENDING"}</span>
+            <div>
+                <span class="request-patient-name">${escapeHTML(data.patientName || data.name || "Unknown Patient")}</span>
+                <div class="queue-mini-meta">${escapeHTML(data.type || "MEDICAL")} · ${formatTime(data.timestamp)}</div>
+            </div>
+            <span class="priority-pill ${priority.toLowerCase()}">${priority}</span>
         </div>
-        <div class="request-meta">Type: <span>${escapeHTML(data.type || "MEDICAL")}</span></div>
+
+        <div class="request-status-line">
+            <span class="request-badge ${status.toLowerCase()}">${statusLabel(status)}</span>
+            <span class="eta-chip">ETA: ${formatEta(data.eta)}</span>
+        </div>
+
         <div class="request-meta">Responder: <span>${escapeHTML(data.responderName || "—")}</span></div>
-        <div class="request-meta">ETA: <span>~${data.eta || "—"} min</span></div>
-        <div class="request-meta">Time: <span>${formatTime(data.timestamp)}</span></div>
-        
+        <div class="request-meta">Reported by: <span>${escapeHTML(data.callerName || data.patientName || "—")}</span></div>
+
         <div class="request-actions">
             ${isPending ? `
                 <button class="btn-decline" onclick="respondToRequestCard('${requestId}', 'DECLINED')">DECLINE</button>
                 <button class="btn-accept" onclick="respondToRequestCard('${requestId}', 'ACCEPTED')">ACCEPT PATIENT</button>
             ` : ""}
             ${isAccepted ? `
-                <button class="btn-accept" style="background:var(--primary); width:100%; flex:none;" 
-                    onclick="confirmPatientArrival('${requestId}')">
-                    CONFIRM PATIENT ENTRY
-                </button>
+                <button class="btn-accept btn-ready" onclick="markHospitalReady('${requestId}')">PREPARE ER</button>
+                <button class="btn-accept" onclick="confirmPatientArrival('${requestId}')">PATIENT RECEIVED</button>
             ` : ""}
+            ${isCompleted ? `<button class="btn-accept" disabled>COMPLETED</button>` : ""}
         </div>
     `;
-    container.prepend(card);
+    container.appendChild(card);
 }
 
-window.confirmPatientArrival = async function(requestId) {
-    // This completes the transport mission and moves the entry to history
-    await update(ref(db, "PatientRequests/" + requestId), {
-        status: "COMPLETED" 
-    });
-    showToast("Patient admitted to ER.", "success");
-};
+function updateHospitalStats() {
+    const today = new Date();
+    const isToday = (ts) => {
+        if (!ts) return false;
+        const d = new Date(ts);
+        return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+    };
+
+    const todays = allRequests.filter(r => isToday(r.timestamp) || isToday(r.acceptedAt) || isToday(r.completedAt));
+    const critical = allRequests.filter(r => normalizePriority(r.priority || r.type) === "CRITICAL" && r.status !== "COMPLETED" && r.status !== "DECLINED");
+    const incoming = allRequests.filter(r => ["PENDING", "ACCEPTED", "READY"].includes(normalizeRequestStatus(r.status)));
+
+    setText("today-cases", todays.length);
+    setText("critical-cases", critical.length);
+    setText("incoming-cases", incoming.length);
+}
+
+function renderSelectedPatient(requestId, data) {
+    const panel = document.getElementById("selected-patient-panel");
+    if (!panel) return;
+
+    const priority = normalizePriority(data.priority || data.type);
+    const status = normalizeRequestStatus(data.status || "PENDING");
+
+    panel.innerHTML = `
+        <div class="selected-priority ${priority.toLowerCase()}">${priority}</div>
+        <h2>${escapeHTML(data.patientName || data.name || "Unknown Patient")}</h2>
+        <div class="selected-row"><span>Emergency</span><strong>${escapeHTML(data.type || "MEDICAL")}</strong></div>
+        <div class="selected-row"><span>Status</span><strong>${statusLabel(status)}</strong></div>
+        <div class="selected-row"><span>Responder</span><strong>${escapeHTML(data.responderName || "—")}</strong></div>
+        <div class="selected-row"><span>ETA</span><strong>${formatEta(data.eta)}</strong></div>
+        <div class="selected-row"><span>Reported</span><strong>${formatTime(data.timestamp)}</strong></div>
+        ${data.isWitness ? `<div class="witness-note">Reported by witness: ${escapeHTML(data.callerName || "Unknown")}</div>` : ""}
+        <div class="detail-actions">
+            ${status === "PENDING" ? `<button class="btn-accept" onclick="respondToRequestCard('${requestId}', 'ACCEPTED')">ACCEPT PATIENT</button>` : ""}
+            ${(status === "ACCEPTED" || status === "READY") ? `<button class="btn-accept btn-ready" onclick="markHospitalReady('${requestId}')">MARK ER READY</button><button class="btn-accept" onclick="confirmPatientArrival('${requestId}')">PATIENT RECEIVED</button>` : ""}
+        </div>
+    `;
+
+    renderPreparationChecklist(data);
+    renderTimeline(data);
+}
+
+function renderPreparationChecklist(data) {
+    const box = document.getElementById("prep-checklist");
+    if (!box) return;
+
+    const type = String(data.type || "medical").toLowerCase();
+    const priority = normalizePriority(data.priority || data.type);
+    let items = ["Prepare receiving nurse", "Prepare patient registration", "Check emergency bed availability"];
+
+    if (priority === "CRITICAL") items.unshift("Alert ER physician immediately");
+    if (type.includes("accident") || type.includes("crash") || type.includes("trauma")) {
+        items.push("Prepare trauma bed", "Prepare oxygen support", "Prepare wound care kit");
+    } else if (type.includes("heart") || type.includes("cardiac") || type.includes("medical")) {
+        items.push("Prepare vital signs monitor", "Prepare oxygen support", "Prepare emergency cart");
+    } else if (type.includes("fire") || type.includes("burn")) {
+        items.push("Prepare burn care supplies", "Prepare sterile dressing", "Prepare IV fluids");
+    } else {
+        items.push("Prepare wheelchair or stretcher", "Prepare triage area");
+    }
+
+    box.innerHTML = items.map(item => `<label class="prep-item"><input type="checkbox"> <span>${escapeHTML(item)}</span></label>`).join("");
+}
+
+function renderTimeline(data) {
+    const box = document.getElementById("hospital-timeline");
+    if (!box) return;
+
+    const rows = [
+        { label: "SOS Created", time: data.timestamp, done: !!data.timestamp },
+        { label: "Hospital Assigned", time: data.assignedAt || data.timestamp, done: true },
+        { label: "Patient Accepted", time: data.acceptedAt, done: normalizeRequestStatus(data.status) === "ACCEPTED" || normalizeRequestStatus(data.status) === "READY" || normalizeRequestStatus(data.status) === "COMPLETED" },
+        { label: "ER Prepared", time: data.readyAt, done: normalizeRequestStatus(data.status) === "READY" || normalizeRequestStatus(data.status) === "COMPLETED" },
+        { label: "Patient Received", time: data.completedAt, done: normalizeRequestStatus(data.status) === "COMPLETED" },
+    ];
+
+    box.innerHTML = rows.map(row => `
+        <div class="timeline-item ${row.done ? "done" : "pending"}">
+            <div class="timeline-dot"></div>
+            <div>
+                <strong>${row.label}</strong>
+                <span>${row.done ? formatTime(row.time) : "Waiting"}</span>
+            </div>
+        </div>
+    `).join("");
+}
+
+function showPatientModal(requestId, req) {
+    activeRequestId = requestId;
+    renderIncomingRequest(requestId, req);
+}
 
 function renderIncomingRequest(requestId, req) {
-    // ── Read new fields with backwards-compatible fallbacks ──
     const patientName  = req.patientName  || req.name  || "Unknown Patient";
     const incidentType = req.type         || "MEDICAL";
     const callerName   = req.callerName   || patientName;
@@ -359,73 +504,234 @@ function renderIncomingRequest(requestId, req) {
     const responder    = req.responderName || "—";
     const eta          = req.eta           || "—";
 
-    // ── Populate modal fields ──
-    document.getElementById("modal-patient-name").textContent = patientName;
-    document.getElementById("modal-type").textContent         = incidentType;
-    document.getElementById("modal-responder").textContent    = responder;
-    document.getElementById("modal-eta").textContent          =
-        eta !== "—" ? `~${eta} min` : "—";
+    setText("modal-patient-name", patientName);
+    setText("modal-type", incidentType);
+    setText("modal-responder", responder);
+    setText("modal-eta", eta !== "—" ? `~${eta} min` : "—");
 
-    // ── Show witness note in modal if caller ≠ patient ──
     const modalWitnessRow = document.getElementById("modal-witness-row");
     const modalWitnessVal = document.getElementById("modal-witness-value");
-
     if (modalWitnessRow && modalWitnessVal) {
         if (isWitness) {
             modalWitnessRow.style.display = "flex";
-            modalWitnessVal.textContent   = `Reported by ${callerName}`;
+            modalWitnessVal.textContent = `Reported by ${callerName}`;
         } else {
             modalWitnessRow.style.display = "none";
         }
     }
 
-    // Store current requestId for accept/decline buttons
-    window._currentRequestId  = requestId;
-    window._currentPatientReq = req;
-
-    // Show the modal
-    document.getElementById("patient-modal").style.display = "flex";
+    const modal = document.getElementById("patient-modal");
+    if (modal) {
+        modal.dataset.requestId = requestId;
+        modal.style.display = "flex";
+        modal.querySelectorAll("button").forEach(btn => {
+            btn.disabled = false;
+            if (btn.classList.contains("btn-accept-modal")) btn.textContent = "ACCEPT PATIENT";
+            if (btn.classList.contains("btn-decline-modal")) btn.textContent = "DECLINE";
+        });
+    }
 }
 
-window.respondToRequest = function(response) {
-    if (!activeRequestId) return;
-    respondToRequestCard(activeRequestId, response);
-    document.getElementById("patient-modal").style.display = "none";
-    activeRequestId = "";
+window.respondToRequest = async function(response) {
+    const modal = document.getElementById("patient-modal");
+    const requestId = activeRequestId || modal?.dataset?.requestId || selectedRequestId;
+    if (!requestId) {
+        showToast("No active patient request selected.", "danger");
+        return;
+    }
+
+    const modalButtons = modal ? modal.querySelectorAll("button") : [];
+    modalButtons.forEach(btn => btn.disabled = true);
+    const acceptBtn = modal?.querySelector(".btn-accept-modal");
+    const declineBtn = modal?.querySelector(".btn-decline-modal");
+    if (response === "ACCEPTED" && acceptBtn) acceptBtn.textContent = "ACCEPTING...";
+    if (response === "DECLINED" && declineBtn) declineBtn.textContent = "DECLINING...";
+
+    try {
+        await respondToRequestCard(requestId, response, true);
+        if (modal) modal.style.display = "none";
+        activeRequestId = "";
+    } catch (err) {
+        console.error(err);
+        showToast("Action failed. Please check internet/Firebase rules.", "danger");
+        modalButtons.forEach(btn => btn.disabled = false);
+        if (acceptBtn) acceptBtn.textContent = "ACCEPT PATIENT";
+        if (declineBtn) declineBtn.textContent = "DECLINE";
+    }
 };
 
-window.respondToRequestCard = async function(requestId, response) {
+window.respondToRequestCard = async function(requestId, response, fromModal = false) {
     const snap = await get(ref(db, "PatientRequests/" + requestId));
     const data = snap.val();
-    if (!data) return;
+    if (!data) {
+        showToast("Patient request not found.", "danger");
+        return;
+    }
 
-    await update(ref(db, "PatientRequests/" + requestId), { status: response });
+    const currentStatus = normalizeRequestStatus(data.status || "PENDING");
+
+    // Stop duplicate Accept. Once accepted, continue with ER workflow.
+    if (response === "ACCEPTED" && currentStatus !== "PENDING") {
+        const normalizedData = { id: requestId, ...data, status: currentStatus };
+        selectedRequestId = requestId;
+        updateLocalRequest(requestId, normalizedData);
+        renderQueueBoard();
+        renderSelectedPatient(requestId, normalizedData);
+        showToast("Patient is already accepted. Continue ER preparation.", "success");
+        return;
+    }
+
+    const now = Date.now();
 
     if (response === "ACCEPTED") {
-        //
-        await update(ref(db, "Emergencies/" + data.emergencyId), {
-            status: "HOSPITAL_BOUND",
-            hospital_name: hospitalData.name,
-            hospital_lat: hospitalData.latitude,
-            hospital_lon: hospitalData.longitude,
-            hospital_id: hospitalId,
-        });
+        const patientUpdate = {
+            status: "ACCEPTED",
+            acceptedAt: now,
+            hospitalStatus: "ACCEPTED",
+            hospitalApproved: true,
+            hospitalApprovedAt: now
+        };
 
-        const newBeds = Math.max(0, (hospitalData.availableBeds ?? 1) - 1);
-        await update(ref(db, "Hospitals/" + hospitalId), {
-            availableBeds: newBeds,
-            erStatus: newBeds > 0 ? "Available" : "Full"
-        });
+        await update(ref(db, "PatientRequests/" + requestId), patientUpdate);
 
-        showToast("Patient accepted. Waiting for unit arrival.", "success");
-    } else {
-        await update(ref(db, "Emergencies/" + data.emergencyId), {
-            status: "ARRIVED",
-            hospital_declined: true,
-        });
+        if (data.emergencyId) {
+            await update(ref(db, "Emergencies/" + data.emergencyId), {
+                // Keep HOSPITAL_BOUND because the responder app already listens for this status.
+                status: "HOSPITAL_BOUND",
+                hospital_name: hospitalData.name || data.hospitalName || "Hospital",
+                hospital_lat: hospitalData.latitude ?? data.hospital_lat ?? 0,
+                hospital_lon: hospitalData.longitude ?? data.hospital_lon ?? 0,
+                hospital_id: hospitalId,
+                hospitalStatus: "ACCEPTED",
+                hospitalApproved: true,
+                hospitalApprovedAt: now
+            });
+        }
+
+        const updatedRequest = { id: requestId, ...data, ...patientUpdate };
+        selectedRequestId = requestId;
+        updateLocalRequest(requestId, updatedRequest);
+        renderQueueBoard();
+        renderSelectedPatient(requestId, updatedRequest);
+        showToast("Patient accepted. Responder has been notified.", "success");
+        return;
+    }
+
+    if (response === "DECLINED") {
+        const patientUpdate = {
+            status: "DECLINED",
+            declinedAt: now,
+            hospitalStatus: "DECLINED"
+        };
+
+        await update(ref(db, "PatientRequests/" + requestId), patientUpdate);
+
+        if (data.emergencyId) {
+            await update(ref(db, "Emergencies/" + data.emergencyId), {
+                status: "ARRIVED",
+                hospital_declined: true,
+                hospitalStatus: "DECLINED",
+                hospitalApproved: false
+            });
+        }
+
+        const updatedRequest = { id: requestId, ...data, ...patientUpdate };
+        updateLocalRequest(requestId, updatedRequest);
+        if (selectedRequestId === requestId) selectedRequestId = "";
+        renderQueueBoard();
+        const panel = document.getElementById("selected-patient-panel");
+        if (panel) panel.innerHTML = `<p class="empty-log">Request declined.</p>`;
         showToast("Patient declined.", "danger");
     }
 };
+
+window.markHospitalReady = async function(requestId) {
+    const snap = await get(ref(db, "PatientRequests/" + requestId));
+    const data = snap.val();
+    if (!data) {
+        showToast("Patient request not found.", "danger");
+        return;
+    }
+
+    const now = Date.now();
+    const patientUpdate = {
+        status: "READY",
+        readyAt: now,
+        hospitalStatus: "READY"
+    };
+
+    await update(ref(db, "PatientRequests/" + requestId), patientUpdate);
+
+    if (data.emergencyId) {
+        await update(ref(db, "Emergencies/" + data.emergencyId), {
+            hospitalStatus: "READY",
+            status: "HOSPITAL_READY",
+            hospitalReadyAt: now
+        });
+    }
+
+    const updatedRequest = { id: requestId, ...data, ...patientUpdate };
+    selectedRequestId = requestId;
+    updateLocalRequest(requestId, updatedRequest);
+    renderQueueBoard();
+    renderSelectedPatient(requestId, updatedRequest);
+    showToast("ER marked ready for incoming patient.", "success");
+};
+
+window.confirmPatientArrival = async function(requestId) {
+    const snap = await get(ref(db, "PatientRequests/" + requestId));
+    const data = snap.val();
+    if (!data) {
+        showToast("Patient request not found.", "danger");
+        return;
+    }
+
+    const now = Date.now();
+    const patientUpdate = {
+        status: "COMPLETED",
+        completedAt: now,
+        hospitalStatus: "PATIENT_RECEIVED"
+    };
+
+    await update(ref(db, "PatientRequests/" + requestId), patientUpdate);
+
+    if (data.emergencyId) {
+        await update(ref(db, "Emergencies/" + data.emergencyId), {
+            hospitalStatus: "PATIENT_RECEIVED",
+            status: "PATIENT_RECEIVED",
+            patientReceivedAt: now
+        });
+    }
+
+    // Deduct bed only when patient is actually received, not on accept.
+    const currentBeds = Number(hospitalData.availableBeds ?? 0);
+    const newBeds = Math.max(0, currentBeds - 1);
+    await update(ref(db, "Hospitals/" + hospitalId), {
+        availableBeds: newBeds,
+        erStatus: newBeds > 0 ? "Available" : "Full"
+    });
+
+    const updatedRequest = { id: requestId, ...data, ...patientUpdate };
+    selectedRequestId = requestId;
+    updateLocalRequest(requestId, updatedRequest);
+    renderQueueBoard();
+    renderSelectedPatient(requestId, updatedRequest);
+    showToast("Patient received and admitted to ER.", "success");
+};
+
+function updateLocalRequest(requestId, updatedRequest) {
+    const normalized = {
+        ...updatedRequest,
+        status: normalizeRequestStatus(updatedRequest.status || "PENDING")
+    };
+
+    const index = allRequests.findIndex(req => req.id === requestId);
+    if (index >= 0) {
+        allRequests[index] = normalized;
+    } else {
+        allRequests.unshift(normalized);
+    }
+}
 
 function addToPatientLog(data) {
     const logDiv = document.getElementById("patient-log");
@@ -436,24 +742,59 @@ function addToPatientLog(data) {
     entry.className = "log-entry";
     entry.innerHTML = `
         <div class="log-entry-name">${escapeHTML(data.patientName || "Unknown")}</div>
-        <div class="log-entry-meta">${data.type || "MEDICAL"} · ${formatTime(data.timestamp)}</div>
+        <div class="log-entry-meta">${escapeHTML(data.type || "MEDICAL")} · ${formatTime(data.completedAt || data.timestamp)}</div>
     `;
-    logDiv.prepend(entry);
+    logDiv.appendChild(entry);
 }
 
 window.logoutHospital = function() {
     signOut(auth).then(() => { window.location.href = "index.html"; });
 };
 
+function normalizePriority(value) {
+    const v = String(value || "").toLowerCase();
+    if (v.includes("critical") || v.includes("cardiac") || v.includes("heart") || v.includes("severe") || v.includes("unconscious")) return "CRITICAL";
+    if (v.includes("high") || v.includes("accident") || v.includes("crash") || v.includes("fire") || v.includes("bleeding")) return "HIGH";
+    if (v.includes("medium") || v.includes("injury") || v.includes("medical")) return "MEDIUM";
+    return "LOW";
+}
+
+function priorityWeight(value) {
+    const p = normalizePriority(value);
+    return { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }[p] || 1;
+}
+
+function statusLabel(status) {
+    const map = {
+        PENDING: "Incoming",
+        ACCEPTED: "Preparing",
+        READY: "ER Ready",
+        COMPLETED: "Received",
+        DECLINED: "Declined"
+    };
+    const s = normalizeRequestStatus(status);
+    return map[s] || s || "Incoming";
+}
+
+function formatEta(eta) {
+    if (!eta || eta === "—") return "—";
+    return String(eta).includes("min") ? eta : `~${eta} min`;
+}
+
 function formatTime(ts) {
     if (!ts) return "—";
     return new Date(ts).toLocaleString("en-PH", {
-        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false
+        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
     });
 }
 
+function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
 function escapeHTML(str) {
-    return String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
+    return String(str ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[m]));
 }
 
 function showToast(message, type = "default") {

@@ -10,12 +10,11 @@
 </head>
 <body>
 
-    <!-- Header -->
     <header class="hosp-header">
         <div class="header-brand">
             <div class="brand-dot"></div>
             <span class="brand-name">V-RESCUE</span>
-            <span class="brand-sub">Hospital Portal</span>
+            <span class="brand-sub">Hospital Command Portal</span>
         </div>
         <div class="header-right">
             <div id="header-status-badge" class="status-badge available">
@@ -27,14 +26,30 @@
         </div>
     </header>
 
-    <div class="dashboard-body">
+    <section class="hospital-stats-bar">
+        <div class="stat-card">
+            <span class="stat-label">Today's Cases</span>
+            <strong id="today-cases">0</strong>
+        </div>
+        <div class="stat-card critical">
+            <span class="stat-label">Critical</span>
+            <strong id="critical-cases">0</strong>
+        </div>
+        <div class="stat-card">
+            <span class="stat-label">Incoming</span>
+            <strong id="incoming-cases">0</strong>
+        </div>
+        <div class="stat-card beds">
+            <span class="stat-label">Available Beds</span>
+            <strong id="beds-summary">—</strong>
+        </div>
+    </section>
 
-        <!-- Left panel — ER Status -->
-        <aside class="panel left-panel">
+    <div class="hospital-command-layout">
 
-            <div class="panel-section-title">ER STATUS</div>
+        <aside class="panel hospital-control-panel">
+            <div class="panel-section-title">ER CONTROL</div>
 
-            <!-- Availability toggle -->
             <div class="er-toggle-card">
                 <div class="er-toggle-label">
                     <span>Emergency Room</span>
@@ -46,8 +61,7 @@
                 </label>
             </div>
 
-            <!-- Bed counter -->
-            <div class="bed-card">
+            <div class="bed-card compact-bed-card">
                 <div class="bed-label">Available Beds</div>
                 <div class="bed-controls">
                     <button class="bed-btn" onclick="adjustBeds(-1)">−</button>
@@ -59,101 +73,81 @@
 
             <div class="divider"></div>
 
-            <!-- Hospital info -->
             <div class="panel-section-title">HOSPITAL INFO</div>
-            <div class="info-row">
-                <span class="info-label">Name</span>
-                <span id="info-name" class="info-value">—</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Barangay</span>
-                <span id="info-barangay" class="info-value">—</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Phone</span>
-                <span id="info-phone" class="info-value">—</span>
-            </div>
-            <div class="info-row">
-                <span class="info-label">Status</span>
-                <span id="info-approval" class="info-value">—</span>
-            </div>
+            <div class="info-row"><span class="info-label">Name</span><span id="info-name" class="info-value">—</span></div>
+            <div class="info-row"><span class="info-label">Barangay</span><span id="info-barangay" class="info-value">—</span></div>
+            <div class="info-row"><span class="info-label">Phone</span><span id="info-phone" class="info-value">—</span></div>
+            <div class="info-row"><span class="info-label">Status</span><span id="info-approval" class="info-value">—</span></div>
 
+            <div class="divider"></div>
+
+            <div class="panel-section-title">PREPARATION CHECKLIST</div>
+            <div id="prep-checklist" class="prep-checklist">
+                <p class="empty-log">Select an incoming patient to view preparation needs.</p>
+            </div>
         </aside>
 
-        <!-- Main panel — Incoming requests -->
-        <main class="main-panel">
-
+        <main class="hospital-main-panel">
             <div class="main-header-row">
                 <div>
-                    <div class="panel-section-title">INCOMING PATIENT REQUESTS</div>
-                    <p class="main-subtitle">
-                        Real-time requests from V-RESCUE dispatch
-                    </p>
+                    <div class="panel-section-title">EMERGENCY QUEUE BOARD</div>
+                    <p class="main-subtitle">Prioritized incoming patients assigned by dispatcher</p>
                 </div>
                 <span id="request-count" class="count-badge">0</span>
             </div>
 
-            <div id="requests-container">
-                <div class="empty-state">
-                    <div class="empty-icon">🏥</div>
-                    <p>No incoming patient requests</p>
-                </div>
+            <div class="queue-tabs">
+                <button class="queue-tab active" data-filter="ALL" onclick="setQueueFilter('ALL')">All</button>
+                <button class="queue-tab" data-filter="PENDING" onclick="setQueueFilter('PENDING')">Pending</button>
+                <button class="queue-tab" data-filter="ACCEPTED" onclick="setQueueFilter('ACCEPTED')">Preparing</button>
+                <button class="queue-tab" data-filter="COMPLETED" onclick="setQueueFilter('COMPLETED')">Completed</button>
             </div>
 
+            <div id="requests-container" class="queue-board">
+                <div class="empty-state"><div class="empty-icon">🏥</div><p>No incoming patient requests</p></div>
+            </div>
         </main>
 
-        <!-- Right panel — Patient log -->
-        <aside class="panel right-panel">
+        <aside class="panel hospital-detail-panel">
+            <div class="panel-section-title">PATIENT STATUS</div>
+            <div id="selected-patient-panel" class="selected-patient-card">
+                <p class="empty-log">Click a queue card to monitor patient details.</p>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="panel-section-title">LIVE TIMELINE</div>
+            <div id="hospital-timeline" class="timeline-list">
+                <p class="empty-log">No selected patient.</p>
+            </div>
+
+            <div class="divider"></div>
 
             <div class="panel-section-title">PATIENT LOG</div>
             <div id="patient-log">
                 <p class="empty-log">No patients yet today.</p>
             </div>
-
         </aside>
 
     </div>
 
-    <!-- Incoming patient alert modal -->
     <div id="patient-modal" class="modal-overlay" style="display:none;">
         <div class="modal-card">
             <div class="modal-badge">🚨 INCOMING PATIENT</div>
             <div id="modal-patient-name" class="modal-patient-name">—</div>
-
-            <div class="modal-meta-row">
-                <span class="modal-label">Type:</span>
-                <span id="modal-type" class="modal-value">—</span>
-            </div>
-            <div class="modal-meta-row">
-                <span class="modal-label">Responder:</span>
-                <span id="modal-responder" class="modal-value">—</span>
-            </div>
-
-            <!-- Witness row — hidden by default, shown when isWitness === true -->
-            <div id="modal-witness-row" class="modal-meta-row" style="display:none;">
-                <span class="modal-label">Witness:</span>
-                <span id="modal-witness-value" class="modal-value"
-                    style="color:#FF9100;">—</span>
-            </div>
-
-            <div class="modal-meta-row">
-                <span class="modal-label">ETA:</span>
-                <span id="modal-eta" class="modal-value">—</span>
-            </div>
-
+            <div class="modal-meta-row"><span class="modal-label">Type:</span><span id="modal-type" class="modal-value">—</span></div>
+            <div class="modal-meta-row"><span class="modal-label">Responder:</span><span id="modal-responder" class="modal-value">—</span></div>
+            <div id="modal-witness-row" class="modal-meta-row" style="display:none;"><span class="modal-label">Witness:</span><span id="modal-witness-value" class="modal-value" style="color:#FF9100;">—</span></div>
+            <div class="modal-meta-row"><span class="modal-label">ETA:</span><span id="modal-eta" class="modal-value">—</span></div>
             <div class="modal-divider"></div>
             <div class="modal-actions">
-                <button class="btn-decline-modal"
-                    onclick="respondToRequest('DECLINED')">DECLINE</button>
-                <button class="btn-accept-modal"
-                    onclick="respondToRequest('ACCEPTED')">ACCEPT PATIENT</button>
+                <button class="btn-decline-modal" onclick="respondToRequest('DECLINED')">DECLINE</button>
+                <button class="btn-accept-modal" onclick="respondToRequest('ACCEPTED')">ACCEPT PATIENT</button>
             </div>
         </div>
     </div>
 
-    <div id="toast" class="toast-hidden">
-        <span id="toast-msg">—</span>
-    </div>
+    <div id="toast" class="toast-hidden"><span id="toast-msg">—</span></div>
 
     <script type="module" src="script.js"></script>
 </body>
